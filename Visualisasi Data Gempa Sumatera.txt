@@ -1,0 +1,158 @@
+library(spatstat)
+library(dplyr)
+library(sp)
+library(maptools)
+# STEP 1 : INPUT DATA
+setwd("D:/my All/Rahma Metrikasari/03/ITS/TUGAS AKHIR/BAHAN TA/DATA/Spatial Point Process/DATA")
+data1<-read.csv("Gempa Sumatera 2004-2018.csv")
+sesar<-read.csv("Sesar sumatra.csv")
+megathrust<-read.csv("Subduksi Sumatra 2.csv")
+gunungapi<-read.csv("gunung berapi aktif.csv")
+lempeng<-read.csv("Lempeng.csv")
+# STEP 2 : Mendeteksi adanya point yang sama menggunakan dplyr
+data2<-distinct(data1,latitude,longitude,.keep_all=TRUE)
+# STEP 3 : MENG-CUT DATA SESUAI BATAS WINDOW
+# Data Gempa
+ll<-with(data2,which(longitude < 94.160120,arr.ind=TRUE))
+datasumatera<-data2[-ll,]
+datafix<-datasumatera%>%filter(depth<60)
+# Data Gunung
+jsm<-with(gunungapi,which(Latitude<(-5.872401),arr.ind=TRUE))
+gunungsum2<-gunungapi[-jsm,]
+lsm<-with(gunungsum2,which(Longitude>107.473420,arr.ind=TRUE))
+gunungapiSM<-gunungsum2[-lsm,]
+
+
+
+# PACKAGE yang digunakan
+library(ggplot2)
+library (rgdal)
+library (rgeos)
+library(maptools)
+library(tmap)
+library(sp)
+library(ggthemes)
+library(maps)
+library(wesanderson)
+library(ggrepel)
+
+theme_set(theme_bw())
+
+# GAMBAR 3 VERSI 1
+# STEP 1 : MEMANGGIL DATA
+
+setwd("E:/My All2/SHP_Indonesia_provinsi")
+PG <- readOGR("indonesia_prop.shp")
+AG <- fortify(PG)
+
+# STEP 2 : PLOT PETA SHP
+b<-ggplot()+ geom_polygon(data=AG, aes(long, lat, group = group),colour = alpha("black", 0.5), size = 0.7, alpha = 0.5)+theme(panel.grid.major = element_line(color = "grey50", linetype = "dashed", size = 0.5),panel.background = element_rect(fill = 'white'),legend.position = "none")+coord_map("mercator")
+# STEP 3 : MENAMBAH POIN GEMPA
+c<-b+geom_point(data=datasumatera3,aes(x=longitude,y=latitude))+theme(axis.title.x=element_blank(),axis.title.y=element_blank(),legend.position = "none")+scale_color_manual(values=wes_palette(n=3, name="Cavalcanti1"))
+# STEP 4 : MENAMBAH SEGMEN SESAR
+g<-b+geom_segment(data=sesar,aes(x=y0,y=x0,xend=y1,yend=x1),size=1,colour = "orange")
+# STEP 5 : MENAMBAH SEGMEN SUBDUKSI
+h<-g+geom_segment(data=megathrust,aes(x=y0,y=x0,xend=y1,yend=x1),size=1,colour = "brown")
+# STEP 6 : MENAMBAH POIN GUNUNG 
+d<-h+geom_point(data=gunungapi,aes(x=Longitude,y=Latitude),size=2.5,pch=17,col="darkred")+theme(axis.title.x=element_blank(),axis.title.y=element_blank())
+
+# MEMBERI LABEL PADA KOTA
+kota<-read.csv("data3.csv")
+kota1 <- kota[-2,]
+kota2<-kota1[-7,]
+kota_fix <- kota2[-6,]
+label_kota1<-d+geom_label(data=lempeng,aes(x=lat,y=long,label=ket),fontface="bold",size=4,fill="aliceblue")
+
+
+
+# GAMBAR 3 VERSI 2
+
+# DATA
+data_indo <- map_data("world")%>%filter(region == "Indonesia")%>%filter(subregion %in% c("Sumatra","Tanahmasa","Siberut","Nias","Pagai Selatan","Pagai Utara","Sipura","Simeule"))
+data_indo2 <- map_data("world")%>%filter(region == "Indonesia")%>%filter(subregion %in% c("Tanahmasa","Siberut","Nias","Pagai Selatan","Pagai Utara","Sipura","Simeule"))
+# STEP 2 : PLOT PETA SHP
+b1<-ggplot()+ geom_polygon(data=data_indo, aes(long, lat, group = group),colour = alpha("black", 0.3), size = 0.7, fill = 'grey50', alpha = 0.3)+theme(panel.grid.major = element_line(color = "grey50", linetype = "dashed", size = 0.5),panel.background = element_rect(fill = 'white'),legend.position = "none")+coord_map("mercator")
+b2<-ggplot()+ geom_polygon(data=data_indo2, aes(long, lat, group = group),colour = alpha("black", 0.3), size = 0.7, fill = 'aliceblue', alpha = 1)+theme(panel.grid.major = element_line(color = "grey50", linetype = "dashed", size = 0.5),panel.background = element_rect(fill = 'white'),legend.position = "none")+coord_map("mercator")
+# STEP 3 : MENAMBAH POIN GEMPA
+c1<-b1+geom_point(data=datafix,aes(x=longitude,y=latitude))+theme(axis.title.x=element_blank(),axis.title.y=element_blank(),legend.position = "none")+scale_color_manual(values=wes_palette(n=3, name="Cavalcanti1"))
+c2<-c1+geom_point(data=datasumaterabes,aes(x=longitude,y=latitude),size=2,colour='darkred')
+# STEP 4 : MENAMBAH SEGMEN SESAR
+g1<-c1+geom_segment(data=sesar,aes(x=y0,y=x0,xend=y1,yend=x1),size=1.5,colour = "orange")
+# STEP 5 : MENAMBAH SEGMEN SUBDUKSI
+h1<-g1+geom_segment(data=megathrust,aes(x=y0,y=x0,xend=y1,yend=x1),size=1.5,colour = "brown")
+# STEP 6 : MENAMBAH POIN GUNUNG 
+d1<-h1+geom_point(data=gunungapiSM,aes(x=Longitude,y=Latitude),size=3.5,pch=17,col="darkred")+theme(axis.title.x=element_blank(),axis.title.y=element_blank())
+
+# MEMBERI LABEL PADA KOTA
+kota<-read.csv("data3.csv")
+kota1 <- kota[-2,]
+kota2<-kota1[-7,]
+kota_fix <- kota2[-6,]
+label_kota2<-d1+geom_label(data=kota_fix,aes(x=lat,y=long,label=kota),fontface="bold",size=4,fill="aliceblue")
+#menghilight point 
+e1<-label_kota2+ geom_point( data=datasumatera %>% arrange(mag) %>% tail(15), aes(x=longitude, y=latitude), color="red",size=4)
+#menambahkan label untuk keterangan magnitudenya
+f1<-e1+geom_label_repel( data=datasumatera %>% arrange(mag) %>% tail(15), aes(x=longitude, y=latitude, label=mag), size=2)
+
+# GAMBAR 3 VERSI 3
+
+# DATA
+sumatra_shp<-broom::tidy(PG,region="KODEGEMPA")
+# STEP 2 : PLOT PETA SHP
+b1<-ggplot()+ geom_polygon(data=sumatra_shp, aes(long, lat, group = group,fill=id),colour = alpha("black", 0.5), size = 0.7, alpha = 0.7)+theme(panel.grid.major = element_line(color = "grey50", linetype = "dashed", size = 0.5),panel.background = element_rect(fill = 'white'),legend.position = "none")+coord_map("mercator")
+# STEP 3 : MENAMBAH POIN GEMPA
+c1<-b1+geom_point(data=datasumatera3,aes(x=longitude,y=latitude))+theme(axis.title.x=element_blank(),axis.title.y=element_blank(),legend.position = "none")+scale_color_manual(values=wes_palette(n=3, name="Cavalcanti1"))
+# STEP 4 : MENAMBAH SEGMEN SESAR
+g1<-b1+geom_segment(data=sesar,aes(x=y0,y=x0,xend=y1,yend=x1),size=1.5,colour = "orange")
+# STEP 5 : MENAMBAH SEGMEN SUBDUKSI
+h1<-g1+geom_segment(data=megathrust,aes(x=y0,y=x0,xend=y1,yend=x1),size=1.5,colour = "brown")
+# STEP 6 : MENAMBAH POIN GUNUNG 
+d1<-h1+geom_point(data=gunungapiSM,aes(x=Longitude,y=Latitude),size=2.5,pch=17,col="darkgreen")+theme(axis.title.x=element_blank(),axis.title.y=element_blank())
+
+# MEMBERI LABEL PADA KOTA
+kota<-read.csv("data3.csv")
+kota1 <- kota[-2,]
+kota2<-kota1[-7,]
+kota_fix <- kota2[-6,]
+label_kota3<-d1+geom_label(data=kota_fix,aes(x=lat,y=long,label=kota),fontface="bold",size=4,fill="aliceblue")
+
+#GAMBAR 4 
+sumatra <- getMap(resolution = "low")
+#PLOT CONTOUR
+#CONTOUR SUBDUKSI
+contour(gempa.dmega,axes=TRUE,add=TRUE)
+plot(gempaSM,add=TRUE)
+plot(megathrustSM,add=TRUE,col="red")
+plot(sumatra, xlim = c(94,108), ylim = c(-6,6.7),col='darkgreen')
+kota<-read.csv("data3.csv")
+kota1<-kota[4:6,]
+latSM<- kota1$lat
+longSM<-kota1$long
+m<-kota1$kota
+kotaSM<-ppp(latSM,longSM,window=windowgempaSM,marks=m)
+plot(kotaSM,add=TRUE,pch=1)
+with(kotaSM, text(kotaSM, labels = (kotaSM$marks), pos = 4))
+# CONTOUR SESAR
+plot(sumatra, xlim = c(94,108), ylim = c(-6,6.7),col='darkgreen')
+contour(gempa.dfault,add=TRUE,axes=TRUE)
+plot(faultSM,add=TRUE,col="orange",cex=2)
+kota<-read.csv("data3.csv")
+kota1<-rbind(kota[1:3,],kota[7,])
+latSM<- kota1$lat
+longSM<-kota1$long
+m<-kota1$kota
+kotaSM<-ppp(latSM,longSM,window=windowgempaSM,marks=m)
+plot(kotaSM,add=TRUE,pch=1)
+with(kotaSM, text(kotaSM, labels = (kotaSM$marks), pos = 4))
+# CONTOUR GUNUNG BERAPI
+plot(sumatra, xlim = c(94,108), ylim = c(-6,6.7),col='darkgreen')
+contour(gempa.dvol,axes=TRUE,add=TRUE)
+plot(vulcanoSM,add=TRUE,col="red",cex=2,pch=17)
+kota<-read.csv("data3.csv")
+kota1<-rbind(kota[1:3,],kota[7,])
+latSM<- kota1$lat
+longSM<-kota1$long
+m<-kota1$kota
+kotaSM<-ppp(latSM,longSM,window=windowgempaSM,marks=m)
+plot(kotaSM,add=TRUE,pch=1)
+with(kotaSM, text(kotaSM, labels = (kotaSM$marks), pos = 4))
